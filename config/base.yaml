@@ -76,7 +76,7 @@ experiment:
 
   # Training arguments
   log_freq: 1000
-  batch_size: 256
+  batch_size: 32
   eval_batch_size: ${data.samples_per_eval_length}
   num_loader_workers: 5
   num_epoch: 500_000
@@ -84,7 +84,7 @@ experiment:
   max_squared_res: 500000
   prefetch_factor: 100
   use_gpu: True
-  num_gpus: 2
+  num_gpus: 1
   sample_mode: cluster_time_batch
 
   # Wandb logging
