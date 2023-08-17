@@ -264,7 +264,26 @@ class Experiment:
                 device = f"cuda:{gpu_id}"
                 self._model = self.model.to(device)
                 self._log.info(f"Using device: {device}")
-
+            #muti gpu mode
+            elif self._exp_conf.num_gpus > 1:
+                device_ids = [
+                f"cuda:{i}" for i in self._available_gpus[:self._exp_conf.num_gpus]
+                ]
+                #DDP mode
+                if self._use_ddp :
+                    device = torch.device("cuda",self.ddp_info['local_rank'])
+                    model = self.model.to(device)
+                    self._model = DDP(model, device_ids=[self.ddp_info['local_rank']], output_device=self.ddp_info['local_rank'],find_unused_parameters=True)
+                    self._log.info(f"Multi-GPU training on GPUs in DDP mode, node_id : {self.ddp_info['node_id']}, devices: {device_ids}")
+                #DP mode
+                else:
+                    if len(self._available_gpus) < self._exp_conf.num_gpus:
+                        raise ValueError(f"require {self._exp_conf.num_gpus} GPUs, but only {len(self._available_gpus)} GPUs available ")
+                    self._log.info(f"Multi-GPU training on GPUs in DP mode: {device_ids}")
+                    gpu_id = self._available_gpus[replica_id]
+                    device = f"cuda:{gpu_id}"
+                    self._model = DP(self._model, device_ids=device_ids)
+                    self._model = self.model.to(device)
         else:
             device = 'cpu'
             self._model = self.model.to(device)
@@ -799,7 +818,7 @@ class Experiment:
         return ret
 
 
-@hydra.main(version_base=None, config_path="../config", config_name="base")
+@hydra.main(version_base=None, config_path="../config", config_name="pure_dsm")
 def run(conf: DictConfig) -> None:
 
     # Fixes bug in https://github.com/wandb/wandb/issues/1525
